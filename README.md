@@ -1,0 +1,2 @@
+# Teamificator
+Team creator utility
