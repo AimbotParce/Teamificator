@@ -15,7 +15,7 @@ def block(state: bool) -> Callable:
             if self.blocker_state == state:
                 return func(self, *args, **kwargs)
             else:
-                raise RuntimeError("Function %s is blocked by now" % func.__name__)
+                raise RuntimeError("Method %s is blocked" % func.__name__)
 
         return wrapper
 
@@ -125,7 +125,7 @@ class People:
             raise TypeError("Invalid type")
 
     @block(True)
-    def teamOptions(self, n: int) -> list[tuple[tuple[int]]]:
+    def teamOptions(self, n: int = 2) -> list[tuple[tuple[int]]]:
         """
         Get team options for n teams.
         """
@@ -133,6 +133,9 @@ class People:
             raise ValueError("n must be greater than 1")
         if n > len(self.people):
             raise ValueError("n must be less than the number of people")
+
+        if n > 2:
+            raise NotImplementedError("n>2 not implemented yet")
 
         perTeam = len(self.people) // n
 
@@ -163,7 +166,7 @@ class People:
         return all(self.isTeamOk(team) for team in teams)
 
     @block(True)
-    def getPossibleTeams(self, n: int = 2) -> list[tuple[str]]:
+    def getPossibleTeams(self, n: int = 2) -> list[tuple[tuple[int]]]:
         """
         Teamificator algorithm:
 
@@ -207,6 +210,7 @@ if __name__ == "__main__":
     people.pair("Ferran", "Andrea")
     people.pair("Jordi", "Berta")
 
+    people.avoid("Marc", "Arón")
     people.avoid("Roger", "Ferran")
     people.avoid("Arón", "Jordi")
 
