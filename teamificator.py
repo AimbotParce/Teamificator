@@ -5,28 +5,21 @@ import numpy as np
 from tabulate import tabulate
 
 
-class Blocker:
-    def __init__(self, initial: bool = False) -> None:
-        self.state = initial
+def block(state: bool) -> Callable:
+    """
+    Decorator to block changes. Only permits a function to be called if self.state equals to the argument state.
+    """
 
-    def block(self, state: bool) -> Callable:
-        """
-        Decorator to block changes. Only permits a function to be called if self.state equals to the argument state.
-        """
+    def decorator(func: Callable) -> Callable:
+        def wrapper(self: "People", *args, **kwargs):
+            if self.blocker_state == state:
+                return func(self, *args, **kwargs)
+            else:
+                raise RuntimeError("Function %s is blocked by now" % func.__name__)
 
-        def decorator(func: Callable) -> Callable:
-            def wrapper(*args, **kwargs):
-                if self.state == state:
-                    return func(*args, **kwargs)
-                else:
-                    raise RuntimeError("Function %s is blocked by now" % func.__name__)
+        return wrapper
 
-            return wrapper
-
-        return decorator
-
-
-blocker = Blocker()
+    return decorator
 
 
 class People:
@@ -34,12 +27,13 @@ class People:
         self.people = set(people)
         self.pairs = set()
         self.avoids = set()
+        self.blocker_state = False
 
-    @blocker.block(False)
+    @block(False)
     def add(self, person: str) -> None:
         self.people.add(person)
 
-    @blocker.block(False)
+    @block(False)
     def remove(self, person: str) -> None:
         self.check(person)
         self.people.remove(person)
@@ -50,14 +44,14 @@ class People:
             if person in avoid:
                 self.avoids.remove(avoid)
 
-    @blocker.block(False)
+    @block(False)
     def check(self, person: str) -> bool:
         if not isinstance(person, str):
             raise TypeError("Invalid type")
         if not person in self.people:
             raise ValueError("Person %s not found" % person)
 
-    @blocker.block(False)
+    @block(False)
     def pair(self, a: str, b: str) -> None:
         self.check(a)
         self.check(b)
@@ -71,7 +65,7 @@ class People:
                 raise ValueError("%s and %s are avoiding" % (a, b))
         self.pairs.add((a, b))
 
-    @blocker.block(False)
+    @block(False)
     def separate(self, a: str, b: str) -> None:
         self.check(a)
         self.check(b)
@@ -81,7 +75,7 @@ class People:
                 return
         raise ValueError("Pair %s and %s not found" % (a, b))
 
-    @blocker.block(False)
+    @block(False)
     def avoid(self, a: str, b: str) -> None:
         self.check(a)
         self.check(b)
@@ -95,7 +89,7 @@ class People:
                 raise ValueError("%s and %s are a pair" % (a, b))
         self.avoids.add((a, b))
 
-    @blocker.block(False)
+    @block(False)
     def unavoid(self, a: str, b: str) -> None:
         self.check(a)
         self.check(b)
@@ -105,21 +99,21 @@ class People:
                 return
         raise ValueError("Avoid %s and %s not found" % (a, b))
 
-    @blocker.block(False)
+    @block(False)
     def commit(self) -> None:
         """
         Commit changes. No more changes can be made after this.
         """
-        blocker.state = True
+        self.blocker_state = True
         self.people = list(self.people)
         self.pairs = self.__indexLinks(self.pairs)
         self.avoids = self.__indexLinks(self.avoids)
 
-    @blocker.block(True)
+    @block(True)
     def __indexLinks(self, links: set[set[int]]) -> list[tuple[int]]:
         return [(self.people.index(a), self.people.index(b)) for a, b in links]
 
-    @blocker.block(True)
+    @block(True)
     def person(self, id: int | list[int] | tuple[int]) -> str:
         if isinstance(id, int):
             return self.people[id]
@@ -130,7 +124,7 @@ class People:
         else:
             raise TypeError("Invalid type")
 
-    @blocker.block(True)
+    @block(True)
     def teamOptions(self, n: int) -> list[tuple[tuple[int]]]:
         """
         Get team options for n teams.
@@ -152,7 +146,7 @@ class People:
         teamB = map(getBothTeams, teamA)
         return list(teamB)
 
-    @blocker.block(True)
+    @block(True)
     def isTeamOk(self, team: list[int]) -> bool:
         for a, b in self.pairs:
             if a in team and b not in team:
@@ -164,11 +158,11 @@ class People:
                 return False
         return True
 
-    @blocker.block(True)
+    @block(True)
     def areTeamsOk(self, teams: Iterable[list[int]]) -> bool:
         return all(self.isTeamOk(team) for team in teams)
 
-    @blocker.block(True)
+    @block(True)
     def getPossibleTeams(self, n: int = 2) -> list[tuple[str]]:
         """
         Teamificator algorithm:
